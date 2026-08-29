@@ -1,0 +1,5 @@
+# Normalise line endings so the repo is identical across Windows/macOS/Linux.
+* text=auto eol=lf
+
+# Windows-only launcher must keep CRLF to run correctly under cmd.exe.
+*.bat text eol=crlf

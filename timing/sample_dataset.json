@@ -1,0 +1,95 @@
+{
+  "description": "Small docs-QA eval set for timing measurement. Replace with your own corpus when you have one; shape stays the same.",
+  "items": [
+    {
+      "input": "How do I rotate the API key for a service account?",
+      "actual_output": "Go to Settings > Service Accounts, select the account, and click 'Rotate key'. The old key stays valid for 24 hours to allow rollover.",
+      "expected_output": "Rotate it from Settings > Service Accounts; the previous key remains valid for 24 hours.",
+      "retrieval_context": [
+        "Service account keys can be rotated from Settings > Service Accounts. Select the account and choose 'Rotate key'.",
+        "After rotation, the previous key remains valid for a 24-hour grace period to allow clients to roll over."
+      ]
+    },
+    {
+      "input": "What is the maximum file size for document uploads?",
+      "actual_output": "Documents up to 50 MB can be uploaded. Larger files should be split or uploaded via the bulk import API.",
+      "expected_output": "50 MB per document; use the bulk import API for larger files.",
+      "retrieval_context": [
+        "The document upload endpoint accepts files up to 50 MB.",
+        "For files exceeding the upload limit, use the bulk import API, which supports chunked transfers."
+      ]
+    },
+    {
+      "input": "Does the webhook retry on failure?",
+      "actual_output": "Yes. Failed webhook deliveries are retried with exponential backoff up to 5 times over roughly 30 minutes.",
+      "expected_output": "Yes, up to 5 retries with exponential backoff (~30 minutes total).",
+      "retrieval_context": [
+        "Webhook deliveries that fail with a non-2xx response are retried up to 5 times.",
+        "Retries use exponential backoff; the final attempt occurs approximately 30 minutes after the first failure."
+      ]
+    },
+    {
+      "input": "Can I restrict sign-ins to my company domain?",
+      "actual_output": "Yes, enable 'Domain restriction' under Security settings and add your allowed domains.",
+      "expected_output": "Yes — Security settings > Domain restriction, then list allowed domains.",
+      "retrieval_context": [
+        "Administrators can enable Domain restriction in Security settings to limit sign-ins to approved email domains.",
+        "Multiple domains can be added to the allowlist."
+      ]
+    },
+    {
+      "input": "How long are audit logs retained?",
+      "actual_output": "Audit logs are retained for 90 days on the standard plan and 365 days on enterprise.",
+      "expected_output": "90 days (standard) or 365 days (enterprise).",
+      "retrieval_context": [
+        "Audit log retention is 90 days for standard plans.",
+        "Enterprise plans retain audit logs for 365 days and support export to SIEM tools."
+      ]
+    },
+    {
+      "input": "Is there a rate limit on the search endpoint?",
+      "actual_output": "The search endpoint is limited to 60 requests per minute per API key; bursts above that return HTTP 429.",
+      "expected_output": "60 requests/minute per key; exceeding it returns 429.",
+      "retrieval_context": [
+        "Search API requests are limited to 60 per minute per API key.",
+        "Requests over the limit receive HTTP 429 with a Retry-After header."
+      ]
+    },
+    {
+      "input": "Can two people edit the same document at once?",
+      "actual_output": "Yes, real-time co-editing is supported; changes merge automatically and conflicts are resolved last-writer-wins per field.",
+      "expected_output": "Yes — real-time co-editing with automatic merging.",
+      "retrieval_context": [
+        "Documents support real-time collaborative editing.",
+        "Concurrent edits are merged automatically; conflicting field-level edits resolve last-writer-wins."
+      ]
+    },
+    {
+      "input": "How do I export all my project data?",
+      "actual_output": "Use Project Settings > Export to download a ZIP containing all documents, metadata, and attachments. Exports over 1 GB are emailed as a link.",
+      "expected_output": "Project Settings > Export produces a ZIP; large exports arrive as an emailed link.",
+      "retrieval_context": [
+        "A full project export is available under Project Settings > Export and produces a ZIP archive of documents, metadata, and attachments.",
+        "Exports larger than 1 GB are prepared asynchronously and delivered as a download link by email."
+      ]
+    },
+    {
+      "input": "What happens to shared links when a document is archived?",
+      "actual_output": "Shared links stop resolving when a document is archived; restoring the document reactivates them.",
+      "expected_output": "Links stop working while archived; restoring the document reactivates them.",
+      "retrieval_context": [
+        "Archiving a document deactivates its shared links.",
+        "Restoring an archived document reactivates previously created shared links."
+      ]
+    },
+    {
+      "input": "Does the SDK support async requests in Python?",
+      "actual_output": "Yes, the Python SDK ships an AsyncClient with the same interface as the sync client.",
+      "expected_output": "Yes — use AsyncClient, which mirrors the sync client interface.",
+      "retrieval_context": [
+        "The Python SDK provides both Client and AsyncClient.",
+        "AsyncClient mirrors the synchronous interface; all methods are awaitable."
+      ]
+    }
+  ]
+}

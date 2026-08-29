@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OmniPex</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #222221;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --border: rgba(255,255,255,0.10);
+    --good: #0ca30c;
+    --warn: #fab219;
+    --crit: #d03b3b;
+    --accent: #3987e5;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--page); color: var(--ink-2);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+
+  /* ---------- header: the before -> after mental model ---------- */
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  header h1 { font-size: 15px; color: var(--ink); font-weight: 650; }
+  header h1 span { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 8px; }
+  .spacer { flex: 1; }
+  .picker { display: flex; align-items: center; gap: 8px; }
+  .picker .leg { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .arrow { color: var(--muted); font-size: 16px; }
+  select, button {
+    background: var(--surface-2); color: var(--ink-2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font: inherit; font-size: 13px;
+  }
+  select { max-width: 230px; }
+  button.primary {
+    background: var(--accent); color: #fff; border-color: transparent;
+    cursor: pointer; font-weight: 600; padding: 7px 16px;
+  }
+  button.primary:hover:not(:disabled) { filter: brightness(1.12); }
+  button.primary:disabled { opacity: .55; cursor: progress; }
+  kbd {
+    font: 11px ui-monospace, Consolas, monospace; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-left: 7px;
+  }
+
+  /* ---------- answer strip: the one sentence that matters ---------- */
+  #answer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 18px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2); color: var(--ink);
+  }
+  #answer.block    { background: color-mix(in srgb, var(--crit) 22%, var(--surface)); }
+  #answer.ok       { background: color-mix(in srgb, var(--good) 16%, var(--surface)); }
+  #answer.busy     { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  #answerMain { font-weight: 650; font-size: 14.5px; }
+  #answerSub  { color: var(--ink-2); font-size: 13px; }
+  .spin {
+    width: 13px; height: 13px; border-radius: 50%; flex: none;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- tabs: labelled by the question they answer ---------- */
+  nav { display: flex; gap: 2px; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  nav button {
+    background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+    padding: 8px 14px 7px; color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; gap: 7px; text-align: left;
+  }
+  nav button:hover { color: var(--ink-2); }
+  nav button.active { color: var(--ink); border-bottom-color: var(--accent); }
+  nav .tl { display: flex; flex-direction: column; line-height: 1.25; }
+  nav .tl b { font-size: 13.5px; font-weight: 600; }
+  nav .tl i {
+    font: 10.5px ui-monospace, Consolas, monospace; font-style: normal;
+    color: var(--muted); opacity: .8;
+  }
+  nav .pip {
+    min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
+    font-size: 11px; font-weight: 700; color: #fff;
+    display: none; align-items: center; justify-content: center;
+  }
+  nav .pip.on { display: flex; }
+  nav .pip.crit { background: var(--crit); }
+  nav .pip.warn { background: var(--warn); color: #1a1a19; }
+  nav .pip.good { background: var(--good); }
+
+  main { flex: 1; overflow: auto; padding: 20px 24px; }
+  footer {
+    display: flex; gap: 10px; align-items: center;
+    padding: 6px 16px; border-top: 1px solid var(--border);
+    background: var(--surface); font-size: 12px; color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); flex: none; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .card h2 + .lead { color: var(--muted); font-size: 12.5px; margin-bottom: 10px; }
+  .badge {
+    display: inline-block; min-width: 86px; text-align: center; flex: none;
+    font-size: 11px; font-weight: 650; letter-spacing: .04em;
+    border-radius: 5px; padding: 2px 8px; color: #fff;
+  }
+  .badge.recompute, .badge.regress, .badge.critical { background: var(--crit); }
+  .badge.reeval, .badge.warning { background: var(--warn); color: #1a1a19; }
+  .badge.safe, .badge.improved, .badge.helps, .badge.ok { background: var(--good); }
+  .badge.noise, .badge.none { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .row { display: flex; gap: 12px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+  .row:last-child { border-bottom: none; }
+  .row .why { color: var(--muted); font-size: 12.5px; }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+  .chip {
+    display: inline-block; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 10px; margin: 3px 6px 3px 0;
+    font-family: ui-monospace, Consolas, monospace; font-size: 12.5px;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--grid); }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; }
+  th[title] { cursor: help; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+  .culprit {
+    border-left: 3px solid var(--crit); background: color-mix(in srgb, var(--crit) 12%, var(--surface));
+    border-radius: 6px; padding: 11px 14px; margin-top: 10px; color: var(--ink); font-size: 14px;
+  }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .next {
+    margin-top: 10px; padding: 9px 13px; border-radius: 7px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--ink-2); font-size: 13px;
+  }
+  .next b { color: var(--ink); }
+  .error-banner { background: color-mix(in srgb, var(--crit) 22%, var(--surface)); color: var(--ink); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; display: none; }
+  svg text { fill: var(--ink-2); font: 12px system-ui, sans-serif; }
+
+  /* ---------- first-run orientation & loading ---------- */
+  .guide { max-width: 640px; margin: 30px auto; text-align: center; color: var(--muted); }
+  .guide h3 { color: var(--ink); font-size: 16px; margin-bottom: 8px; font-weight: 620; }
+  .guide ol { text-align: left; display: inline-block; margin-top: 14px; line-height: 1.9; padding-left: 20px; }
+  .guide ol b { color: var(--ink-2); }
+  .skeleton { display: flex; flex-direction: column; gap: 10px; padding: 30px 0; color: var(--muted); align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>OmniPex<span>regression CI for AI pipelines</span></h1>
+  <div class="spacer"></div>
+  <div class="picker">
+    <span class="leg">before</span><select id="base" title="The pipeline config as it was"></select>
+    <span class="arrow">&rarr;</span>
+    <span class="leg">after</span><select id="cand" title="The pipeline config after your change"></select>
+  </div>
+  <button class="primary" id="run">Analyze<kbd>Ctrl&nbsp;&crarr;</kbd></button>
+</header>
+
+<div id="answer">
+  <span id="answerMain">Loading…</span>
+  <span id="answerSub"></span>
+</div>
+
+<nav>
+  <button data-tab="pipeline" class="active" title="omnipex show">
+    <span class="tl"><b>Pipeline</b><i>what's in my system</i></span><span class="pip" id="pip-pipeline"></span>
+  </button>
+  <button data-tab="doctor" title="omnipex doctor">
+    <span class="tl"><b>Health</b><i>config vs. reality</i></span><span class="pip" id="pip-doctor"></span>
+  </button>
+  <button data-tab="diff" title="omnipex diff">
+    <span class="tl"><b>Impact</b><i>what my change touched</i></span><span class="pip" id="pip-diff"></span>
+  </button>
+  <button data-tab="blame" title="omnipex blame">
+    <span class="tl"><b>Root cause</b><i>what actually broke it</i></span><span class="pip" id="pip-blame"></span>
+  </button>
+</nav>
+
+<main>
+  <div class="error-banner" id="error"></div>
+  <section id="tab-pipeline"></section>
+  <section id="tab-doctor" hidden></section>
+  <section id="tab-diff" hidden><div class="guide">
+    <h3>What changed, and did it matter?</h3>
+    <p>Pick the config from <b>before</b> your change and the one from <b>after</b>, then hit Analyze.
+       OmniPex works out which components are affected, re-runs only the evaluations at risk,
+       and separates real quality changes from random LLM noise.</p>
+  </div></section>
+  <section id="tab-blame" hidden><div class="guide">
+    <h3>Which change broke it?</h3>
+    <p>When one commit changes several things, OmniPex isolates each change on its own,
+       re-runs the affected metric, and names the one responsible — including when a second
+       change was quietly masking the damage.</p>
+  </div></section>
+</main>
+
+<footer>
+  <div class="dot" id="statusDot"></div>
+  <div id="status">connecting…</div>
+  <div class="spacer"></div>
+  <div>rules: <b id="packInfo">RAG pipelines</b></div>
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (x, d = 3) => (x >= 0 ? "+" : "") + x.toFixed(d);
+const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+function setStatus(msg, bad = false) {
+  $("status").textContent = msg;
+  $("statusDot").style.background = bad ? "var(--crit)" : "var(--good)";
+}
+function setAnswer(kind, main, sub = "", busy = false) {
+  const el = $("answer");
+  el.className = kind;
+  el.innerHTML = (busy ? '<span class="spin"></span>' : "") +
+    `<span id="answerMain">${esc(main)}</span><span id="answerSub">${esc(sub)}</span>`;
+}
+function setPip(tab, text, cls) {
+  const pip = $("pip-" + tab);
+  pip.textContent = text;
+  pip.className = "pip " + (text === "" ? "" : "on " + cls);
+}
+function showError(msg) {
+  const el = $("error");
+  el.textContent = msg;
+  el.style.display = msg ? "block" : "none";
+}
+async function post(path, body) {
+  const t0 = performance.now();
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return { data, ms: performance.now() - t0 };
+}
+
+/* ---------- tabs ---------- */
+const TABS = ["pipeline", "doctor", "diff", "blame"];
+function openTab(name) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  TABS.forEach(t => $("tab-" + t).hidden = t !== name);
+}
+document.querySelectorAll("nav button").forEach(btn => btn.onclick = () => openTab(btn.dataset.tab));
+
+/* ---------- pipeline graph (layered DAG, SVG) ---------- */
+function renderPipeline(p) {
+  const layer = {}, incoming = {};
+  p.nodes.forEach(n => { layer[n.id] = 0; incoming[n.id] = []; });
+  p.edges.forEach(([s, d]) => incoming[d].push(s));
+  for (let i = 0; i < p.nodes.length; i++)          // relax |V| times (DAG-safe)
+    p.edges.forEach(([s, d]) => { layer[d] = Math.max(layer[d], layer[s] + 1); });
+
+  const cols = {};
+  p.nodes.forEach(n => { (cols[layer[n.id]] ||= []).push(n); });
+  const W = 168, H = 58, GX = 64, GY = 18, PAD = 20;
+  const pos = {};
+  Object.entries(cols).forEach(([l, nodes]) => nodes.forEach((n, i) => {
+    pos[n.id] = { x: PAD + l * (W + GX), y: PAD + i * (H + GY) };
+  }));
+  const width = PAD * 2 + (Math.max(...Object.values(layer)) + 1) * (W + GX) - GX;
+  const height = PAD * 2 + Math.max(...Object.values(cols).map(c => c.length)) * (H + GY) - GY;
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" style="max-width:100%" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 z" fill="var(--muted)"/></marker></defs>`;
+  p.edges.forEach(([s, d]) => {
+    const a = pos[s], b = pos[d];
+    svg += `<path d="M${a.x + W},${a.y + H/2} C ${a.x + W + GX/2},${a.y + H/2} ${b.x - GX/2},${b.y + H/2} ${b.x - 2},${b.y + H/2}"
+            fill="none" stroke="var(--grid)" stroke-width="2" marker-end="url(#arr)"/>`;
+  });
+  p.nodes.forEach(n => {
+    const { x, y } = pos[n.id];
+    const evals = n.evals.length
+      ? `<text x="${x + 10}" y="${y + H + 13}" style="fill:var(--muted);font-size:10.5px">measured by: ${esc(n.evals.join(", "))}</text>` : "";
+    svg += `<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="${x + 12}" y="${y + 24}" style="fill:var(--ink);font-weight:600">${esc(n.id)}</text>
+            <text x="${x + 12}" y="${y + 42}" style="fill:var(--muted);font-size:11px">${esc(n.type)}${n.produces_artifact ? " → " + esc(n.produces_artifact) : ""}</text>${evals}`;
+  });
+  svg += "</svg>";
+
+  $("tab-pipeline").innerHTML =
+    `<div class="card"><h2>${esc(p.name)}</h2>
+     <div class="lead">${p.nodes.length} components, ${p.edges.length} connections — data flows left to right.
+     This is the "before" config; changing the selector above switches it.</div>
+     <div style="overflow-x:auto">${svg}</div></div>`;
+}
+
+/* ---------- health (doctor) ---------- */
+const SEVERITY = { critical: "critical", warning: "warning", ok: "ok" };
+function renderDoctor(r) {
+  const head = {
+    inconsistent: ["What you configured is not what was built.",
+                   "rebuild the stale artifact, then re-run your evaluations — until then any result here is unreliable."],
+    unverified:   ["Nothing broken, but some things could not be checked.",
+                   "have your build script write a stamp file so OmniPex can verify the artifact matches your config."],
+    consistent:   ["Config and built artifacts agree.", ""],
+  }[r.status];
+
+  let html = `<div class="card"><h2>Health of the “before” config</h2>
+    <div class="lead">${esc(head[0])}</div>`;
+  html += r.findings.map(f =>
+    `<div class="row"><span class="badge ${SEVERITY[f.severity]}">${f.severity.toUpperCase()}</span>` +
+    `<span class="mono">${esc(f.node_id)}</span><span class="why">${esc(f.message)}</span></div>`
+  ).join("") || `<div class="note">No stored artifacts are declared, so there is nothing to verify.</div>`;
+  if (head[1]) html += `<div class="next"><b>Next:</b> ${esc(head[1])}</div>`;
+  html += `<div class="note">${esc(r.note)}</div></div>`;
+  $("tab-doctor").innerHTML = html;
+
+  if (r.status === "inconsistent") setPip("doctor", String(r.counts.critical), "crit");
+  else if (r.status === "unverified") setPip("doctor", String(r.counts.warning), "warn");
+  else setPip("doctor", "✓", "good");
+}
+
+/* ---------- impact (diff) ---------- */
+const EFFECT = {
+  recompute_required:  ["recompute", "REBUILD",  "must be rebuilt before it is usable"],
+  behavior_may_change: ["reeval",    "RE-CHECK", "output may change, so it gets re-evaluated"],
+  no_effect:           ["safe",      "SAFE",     "provably unaffected"],
+};
+function renderDiff(r) {
+  const el = $("tab-diff");
+  if (!r.changes.length) {
+    el.innerHTML = `<div class="card"><h2>No differences</h2>
+      <div class="lead">The two configs are identical, so there is nothing to analyze.
+      Pick a different "after" config above.</div></div>`;
+    return;
+  }
+  let html = `<div class="card"><h2>What you changed</h2>
+    <div class="lead">${plural(r.changes.length, "parameter")} differ between before and after.</div>` +
+    r.changes.map(c => `<span class="chip">${esc(c.label)}</span>`).join("") + `</div>`;
+
+  html += `<div class="card"><h2>What those changes touch</h2>
+    <div class="lead">Derived from the dependency graph — components that must be rebuilt,
+    re-evaluated, or are provably safe.</div>` +
+    r.effects.map(e => {
+      const [cls, label] = EFFECT[e.effect];
+      return `<div class="row"><span class="badge ${cls}">${label}</span><span class="mono">${esc(e.node_id)}</span><span class="why">${esc(e.reason)}</span></div>`;
+    }).join("") + `</div>`;
+
+  if (Object.keys(r.recompute).length)
+    html += `<div class="card"><h2>Must rebuild before shipping</h2>` +
+      Object.entries(r.recompute).map(([n, a]) =>
+        `<div class="row"><span class="badge recompute">REBUILD</span><span class="mono">${esc(a)}</span><span class="why">produced by ${esc(n)}</span></div>`
+      ).join("") + `</div>`;
+
+  if (r.evals.length) {
+    const real = r.evals.filter(e => e.verdict !== "noise").length;
+    html += `<div class="card"><h2>Quality: real change or noise?</h2>
+      <div class="lead">Each affected metric was re-run on identical inputs before and after.
+      A change counts as real only when its confidence interval excludes zero —
+      ${real ? plural(real, "metric") + " moved for real" : "none moved for real"}.</div>
+      <table>
+      <tr><th>metric</th><th class="num">before</th><th class="num">after</th>
+      <th class="num">change</th>
+      <th class="num" title="95% confidence interval. If it crosses zero, the change is indistinguishable from random LLM variation.">95% CI</th>
+      <th>verdict</th></tr>` +
+      r.evals.map(ev => {
+        const cls = { REGRESSION: "regress", IMPROVED: "improved", INSUFFICIENT: "warning" }[ev.verdict] || "noise";
+        const label = { REGRESSION: "GOT WORSE", IMPROVED: "GOT BETTER",
+                        INSUFFICIENT: "too few items" }[ev.verdict] || "no real change";
+        return `<tr><td>${esc(ev.metric)}</td><td class="num">${ev.baseline_mean.toFixed(3)}</td>
+          <td class="num">${ev.candidate_mean.toFixed(3)}</td><td class="num">${fmt(ev.delta)}</td>
+          <td class="num">[${fmt(ev.ci_low)}, ${fmt(ev.ci_high)}]</td>
+          <td><span class="badge ${cls}">${label}</span></td></tr>`;
+      }).join("") + `</table>`;
+    if (r.verdict.status === "block")
+      html += `<div class="next"><b>Next:</b> open <b>Root cause</b> to see which change is responsible.</div>`;
+    html += `</div>`;
+  }
+  el.innerHTML = html;
+
+  const n = r.verdict.regressions;
+  if (n) setPip("diff", String(n), "crit");
+  else setPip("diff", "✓", "good");
+}
+
+/* ---------- root cause (blame) ---------- */
+function renderBlame(r) {
+  const el = $("tab-blame");
+  if (!r.metrics.length) {
+    el.innerHTML = `<div class="card"><h2>Nothing to explain</h2>
+      <div class="lead">No metric got worse in a way that stands out from noise,
+      so there is no culprit to find.</div></div>`;
+    setPip("blame", "✓", "good");
+    return;
+  }
+  let html = "", culprits = 0;
+  for (const m of r.metrics) {
+    html += `<div class="card"><h2>${esc(m.metric)} got worse (${fmt(m.total.delta)})</h2>
+      <div class="lead">Each suspect change was applied on its own to the "before" config
+      and the metric re-run, to see what it does in isolation.</div>`;
+    html += m.isolated.map(iso => {
+      const cls = iso.verdict === "regression" ? "regress" : iso.verdict === "helps" ? "helps" : "none";
+      const label = iso.verdict === "regression" ? "THE CAUSE" : iso.verdict === "helps" ? "HELPED" : "INNOCENT";
+      return `<div class="row"><span class="badge ${cls}">${label}</span><span class="mono">${esc(iso.change)}</span>
+        <span class="why">${fmt(iso.delta)} on its own</span></div>`;
+    }).join("");
+    if (m.culprit) {
+      culprits++;
+      html += `<div class="culprit"><b>Cause:</b> <span class="mono">${esc(m.culprit)}</span>` +
+        (m.masked_by.length
+          ? `<div class="note">This looked smaller than it is — ${esc(m.masked_by.join(", "))} improved the same
+             metric and partially hid the damage.</div>` : "") + `</div>`;
+    } else {
+      html += `<div class="next">No single change explains this on its own — the changes likely
+        interact (unexplained remainder ${fmt(m.residual)}). Try reverting them as a group.</div>`;
+    }
+    html += `</div>`;
+  }
+  html += `<div class="card"><h2>Cost of this analysis</h2>
+    <div class="lead">Testing every change against every metric would have needed
+    ${r.naive_runs} evaluation runs; ${r.graph_runs} actually ran.
+    ${r.skipped_clean_metric} were skipped because the metric never regressed, and
+    ${r.skipped_by_graph} were ruled out by the dependency graph as impossible.</div></div>`;
+  el.innerHTML = html;
+  setPip("blame", String(culprits), culprits ? "crit" : "good");
+}
+
+/* ---------- wiring ---------- */
+async function loadManifests() {
+  const res = await fetch("/api/manifests");
+  const manifests = await res.json();
+  if (!manifests.length) {
+    setAnswer("", "No pipeline manifests found here.",
+              "Start OmniPex from a project containing manifest JSON files, or pass --dir.");
+    setStatus("no manifests found", true);
+    return;
+  }
+  for (const sel of [$("base"), $("cand")])
+    sel.innerHTML = manifests.map(m => `<option value="${esc(m.path)}">${esc(m.path)}</option>`).join("");
+  if (manifests.length > 1) $("cand").selectedIndex = 1;
+  setStatus(`${plural(manifests.length, "manifest")} found`);
+  setAnswer("", "Ready.", "Choose the before and after configs, then press Analyze.");
+  refreshBase();
+}
+
+async function refreshBase() {
+  try {
+    const [shown, checked] = await Promise.all([
+      post("/api/show", { path: $("base").value }),
+      post("/api/doctor", { path: $("base").value, pack: "rag" }),
+    ]);
+    renderPipeline(shown.data);
+    renderDoctor(checked.data);
+    if (checked.data.status === "inconsistent") {
+      setAnswer("block", "Your built artifacts don't match this config.",
+                "See Health — evaluation results cannot be trusted until you rebuild.");
+      setStatus("consistency problem in the before config", true);
+    }
+  } catch (e) { showError(e.message); }
+}
+
+$("base").onchange = () => { showError(""); refreshBase(); };
+
+async function analyze() {
+  showError("");
+  const btn = $("run");
+  btn.disabled = true;
+  setAnswer("busy", "Analyzing…", "Re-running the evaluations your change put at risk.", true);
+  ["diff", "blame"].forEach(t => {
+    $("tab-" + t).innerHTML = `<div class="skeleton"><div class="spin"></div><div>Running evaluations…</div></div>`;
+    setPip(t, "", "");
+  });
+  setStatus("analyzing…");
+  try {
+    const body = { base: $("base").value, candidate: $("cand").value, pack: "rag" };
+    const d = await post("/api/diff", body);
+    renderDiff(d.data);
+    const b = await post("/api/blame", body);
+    renderBlame(b.data);
+
+    const seconds = ((d.ms + b.ms) / 1000).toFixed(1);
+    const v = d.data.verdict;
+    if (!d.data.changes.length) {
+      setAnswer("", "These two configs are identical.", "Pick a different “after” config to compare.");
+      openTab("diff");
+    } else if (v.status === "block") {
+      const causes = [...new Set(b.data.metrics.map(m => m.culprit).filter(Boolean))];
+      setAnswer("block",
+        `${plural(v.regressions, "metric")} got worse.`,
+        causes.length ? `Cause: ${causes.join("; ")}` : "No single change explains it — likely an interaction.");
+      openTab("blame");                       // land on the answer
+    } else {
+      setAnswer("ok", "Safe to ship.",
+        v.improvements ? `${plural(v.improvements, "metric")} improved; nothing got worse.`
+                       : "No metric changed beyond normal LLM variation.");
+      openTab("diff");
+    }
+    setStatus(`analysis finished in ${seconds}s`, v.status === "block");
+  } catch (e) {
+    showError(e.message);
+    setAnswer("block", "Analysis failed.", e.message);
+    setStatus("analysis failed", true);
+    ["diff", "blame"].forEach(t => $("tab-" + t).innerHTML = "");
+  } finally {
+    btn.disabled = false;
+  }
+}
+$("run").onclick = analyze;
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !$("run").disabled) analyze();
+});
+
+loadManifests().catch(e => {
+  setStatus("server unreachable", true);
+  setAnswer("block", "Cannot reach the OmniPex server.", e.message);
+});
+</script>
+</body>
+</html>

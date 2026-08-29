@@ -1,0 +1,17 @@
+{
+  "_comment": "Register OmniPex as an MCP server so Claude Code / Cursor can call it. Copy the 'mcpServers' block into your host's MCP config, adjusting --dir to your project root. Use 'python -m omnipex.cli' instead of 'omnipex' if the console script is not on your PATH.",
+  "mcpServers": {
+    "omnipex": {
+      "command": "omnipex",
+      "args": ["mcp", "--dir", "."]
+    }
+  },
+  "_alternative_without_path_entry": {
+    "mcpServers": {
+      "omnipex": {
+        "command": "python",
+        "args": ["-m", "omnipex.cli", "mcp", "--dir", "."]
+      }
+    }
+  }
+}

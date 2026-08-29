@@ -1,0 +1,12 @@
+{
+  "_comment": "Build stamp — emitted by your index build script, recording what the artifact was ACTUALLY built with. Compare against the manifest via `omnipex doctor`.",
+  "artifact": "vector_index",
+  "built_at": "2026-07-14T09:12:00Z",
+  "corpus_hash": "sha256:9f2c1d7a",
+  "params": {
+    "chunker.size": 512,
+    "chunker.overlap": 50,
+    "embedder.model": "text-embedding-3-small",
+    "embedder.dim": 1536
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "docs_qa",
+  "nodes": [
+    { "id": "chunker",  "type": "chunker",     "params": { "size": 512, "overlap": 50 } },
+    { "id": "embedder", "type": "embedder",    "params": { "model": "text-embedding-3-small", "dim": 1536 }, "produces_artifact": "vector_index", "stamp": "stamps/vector_index.json" },
+    { "id": "store",    "type": "vectorstore", "params": { "metric": "cosine" } },
+    { "id": "retriever","type": "retriever",   "params": { "top_k": 4 }, "evals": ["context_recall"] },
+    { "id": "prompt",   "type": "prompt",      "params": { "template_hash": "abc123" } },
+    { "id": "llm",      "type": "llm",         "params": { "model": "gpt-4o", "temperature": 0.0 }, "evals": ["faithfulness", "answer_correctness"] }
+  ],
+  "edges": [
+    ["chunker", "embedder"],
+    ["embedder", "store"],
+    ["store", "retriever"],
+    ["retriever", "prompt"],
+    ["prompt", "llm"]
+  ]
+}

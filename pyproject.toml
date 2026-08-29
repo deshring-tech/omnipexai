@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omnipex"
+dynamic = ["version"]          # single source of truth: omnipex.__version__
+description = "Regression CI for AI pipelines: change-impact analysis and culprit attribution for eval regressions"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Omnipex" }]
+keywords = ["rag", "llm", "evaluation", "regression", "ci", "attribution"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Quality Assurance",
+]
+# Zero runtime dependencies by design: the core engine must be embeddable
+# anywhere (CI containers, MCP servers, IDE extensions) without a dep tree.
+dependencies = []
+
+[project.scripts]
+omnipex = "omnipex.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "omnipex.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["omnipex*"]
+
+[tool.setuptools.package-data]
+omnipex = ["py.typed", "ui/*.html"]
